@@ -261,6 +261,8 @@ body.single .wrap{flex:1;max-width:none;padding:0;display:flex;
 .wbtn{width:100%;padding:11px;background:var(--zhu);color:#fff;border:none;border-radius:2px;
   font-size:14.5px;font-family:inherit;cursor:pointer;letter-spacing:.06em;transition:.15s}
 .wbtn:hover{background:var(--zhu-l)}
+.wbtn.ghost{background:none;color:var(--muted);border:1px solid var(--line);margin-top:8px}
+.wbtn.ghost:hover{background:rgba(107,86,160,.06);color:var(--ink2)}
 .wtip{font-size:10.5px;color:var(--muted);margin-top:12px;opacity:.75}
 
 /* ── 报告 ── */
@@ -434,6 +436,12 @@ let mode = "single";   // single | list
 let shuffleOn = false, shuffleKey = "", shuffleOrder = null;
 let profile = null;
 
+/* ── 跨设备同步 ── */
+const SYNC_URL = "__SYNC_URL__";
+let syncCode = localStorage.getItem("ob_sync_code") || "";
+let syncDirty = {};
+let syncTimer = null;
+
 function hashKey(s){
   let h = 5381;
   for(let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
@@ -579,6 +587,8 @@ function bindCard(card, list){
         peek.textContent = "收起";
         done[card.dataset.id] = chosen === right ? 1 : 0;
         saveDone();
+        syncDirty[card.dataset.id] = done[card.dataset.id];
+        queueSync();
         updateHint(list);
         // 错题本里答对了，自动把这道题移出
         if(chosen === right && curMod === "__wrong__"){
@@ -725,6 +735,62 @@ function updateHint(list){
   if(fill) fill.style.width = (nDone ? Math.max(pct, 0.8) : 0) + "%";
   const wc = document.getElementById("wrongCount");
   if(wc) wc.textContent = wrongIds().length;
+}
+
+/* ── 同步 ── */
+function setSyncState(msg){
+  const b = document.getElementById("syncBtn");
+  if(!b) return;
+  b.classList.toggle("on", !!syncCode);
+  b.title = msg || (syncCode ? "同步码：" + syncCode : "跨设备同步");
+}
+
+function queueSync(){
+  if(!SYNC_URL || !syncCode) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncPush, 1500);
+}
+
+async function syncPush(force){
+  if(!SYNC_URL || !syncCode) return;
+  const ids = Object.keys(force ? done : syncDirty);
+  if(!ids.length) return;
+  const payload = {};
+  ids.forEach(id => { payload[id] = done[id]; });
+  try{
+    const r = await fetch(`${SYNC_URL}?k=${encodeURIComponent(syncCode)}`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({items: payload})
+    });
+    const j = await r.json();
+    if(j && j.items){
+      Object.keys(j.items).forEach(id => { done[id] = j.items[id]; });
+      saveDone();
+      syncDirty = {};
+      updateHint(getList());
+      setSyncState("已同步 · " + Object.keys(j.items).length + " 题");
+    }
+  }catch(e){
+    setSyncState("同步失败，稍后重试");
+  }
+}
+
+async function syncPull(){
+  if(!SYNC_URL || !syncCode) return;
+  try{
+    const r = await fetch(`${SYNC_URL}?k=${encodeURIComponent(syncCode)}`);
+    const j = await r.json();
+    if(j && j.items){
+      const n = Object.keys(j.items).length;
+      Object.keys(j.items).forEach(id => { done[id] = j.items[id]; });
+      saveDone();
+      render();
+      setSyncState(n ? `已拉取 ${n} 题` : "同步码已就绪");
+    }
+  }catch(e){
+    setSyncState("连接失败，检查网络");
+  }
 }
 
 function buildReport(){
@@ -890,6 +956,9 @@ document.getElementById("who").onclick = ()=>{
   askName("");
 };
 
+/* 同步：当前采用纯本地存储，跨设备同步入口暂不开放。
+   若日后接入后端，补回 syncBtn / syncBox 两个节点并填入 SYNC_URL 即可。 */
+
 /* 启动 */
 try{ profile = JSON.parse(localStorage.getItem("ob_profile") || "null"); }catch(e){ profile = null; }
 if(profile && profile.name){
@@ -901,6 +970,8 @@ if(profile && profile.name){
   setTimeout(()=>askName(""), 260);
 }
 render();
+setSyncState();
+if(syncCode) setTimeout(syncPull, 500);
 </script>
 </body>
 </html>
