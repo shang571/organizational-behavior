@@ -364,7 +364,7 @@ body.single .wrap{flex:1;max-width:none;padding:0;display:flex;
 /* ── 首页 / 知识点 ── */
 .home,.know{display:none}
 body[data-view="home"] .home{display:flex}
-body[data-view="know"] .know{display:flex}
+body[data-view="know"] .know{display:block}
 body[data-view="home"] .top,body[data-view="home"] .side,body[data-view="home"] .main,
 body[data-view="know"] .top,body[data-view="know"] .side,body[data-view="know"] .main{
   display:none!important}
@@ -389,8 +389,9 @@ body[data-view="know"] .top,body[data-view="know"] .side,body[data-view="know"] 
 .hcard-go{font-size:12.5px;color:var(--zhu);letter-spacing:.05em}
 .home-ft{margin-top:26px;text-align:center;font-size:11px;color:var(--muted);opacity:.8}
 
-.know{position:fixed;inset:0;z-index:60;background:var(--paper);flex-direction:column}
-.know-top{flex:0 0 auto;padding:11px 18px;border-bottom:1px solid var(--line);
+.know{position:fixed;inset:0;z-index:60;background:var(--paper);
+  overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.know-top{position:sticky;top:0;z-index:12;padding:11px 18px;border-bottom:1px solid var(--line);
   background:rgba(245,240,252,.95);backdrop-filter:blur(12px);
   display:flex;align-items:center;gap:12px}
 .know-back{flex:0 0 auto;font-size:12px;padding:5px 12px;border:1px solid var(--line);
@@ -405,8 +406,9 @@ body[data-view="know"] .top,body[data-view="know"] .side,body[data-view="know"] 
 .km:hover{background:rgba(107,86,160,.09);color:var(--zhu)}
 .km.on{background:var(--zhu);color:#fff}
 
-.know-body{flex:1;overflow-y:auto;padding:22px 18px 90px;width:100%;max-width:880px;margin:0 auto}
+.know-body{padding:22px 18px 90px;width:100%;max-width:1020px;margin:0 auto}
 .know-hint{font-size:12.5px;color:var(--muted);margin-bottom:6px}
+.know-top-in{width:100%;max-width:1020px;margin:0 auto;display:flex;align-items:center;gap:12px}
 .kunit{font-size:12.5px;color:var(--muted);letter-spacing:.12em;margin:24px 0 10px;
   padding-left:9px;border-left:2px solid var(--gold)}
 .kunit:first-of-type{margin-top:6px}
@@ -1045,7 +1047,7 @@ function renderKnow(){
     el.onclick = ()=>{
       knowMod = +el.dataset.i;
       renderKnow();
-      document.getElementById("knowBody").scrollTop = 0;
+      document.querySelector(".know").scrollTop = 0;
     };
   });
 
